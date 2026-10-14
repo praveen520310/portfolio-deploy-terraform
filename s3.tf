@@ -1,5 +1,4 @@
-
-# S3 bucket for portfolio static website
+# S3 bucket for portfolio website
 resource "aws_s3_bucket" "portfolio" {
   bucket = "praveen-devsecops-portfolio-2026-s3"
 
@@ -10,17 +9,17 @@ resource "aws_s3_bucket" "portfolio" {
   }
 }
 
-# Configure public access settings
+# Block public access to the S3 bucket
 resource "aws_s3_bucket_public_access_block" "portfolio" {
   bucket = aws_s3_bucket.portfolio.id
 
-  block_public_acls       = false
-  block_public_policy     = false
-  ignore_public_acls      = false
-  restrict_public_buckets = false
+  block_public_acls       = true
+  block_public_policy     = true
+  ignore_public_acls      = true
+  restrict_public_buckets = true
 }
 
-# Enable static website hosting
+# S3 website hosting configuration (CloudFront uses the REST endpoint)
 resource "aws_s3_bucket_website_configuration" "portfolio" {
   bucket = aws_s3_bucket.portfolio.id
 
@@ -33,26 +32,15 @@ resource "aws_s3_bucket_website_configuration" "portfolio" {
   }
 }
 
-# Allow public access to website files
+# Allow CloudFront OAC to read S3 objects
 resource "aws_s3_bucket_policy" "portfolio" {
   bucket = aws_s3_bucket.portfolio.id
+
+  policy = data.aws_iam_policy_document.portfolio_cloudfront_access.json
 
   depends_on = [
     aws_s3_bucket_public_access_block.portfolio
   ]
-
-  policy = jsonencode({
-    Version = "2012-10-17"
-    Statement = [
-      {
-        Sid       = "PublicReadWebsiteFiles"
-        Effect    = "Allow"
-        Principal = "*"
-        Action    = "s3:GetObject"
-        Resource  = "${aws_s3_bucket.portfolio.arn}/*"
-      }
-    ]
-  })
 }
 
 # Upload portfolio HTML
@@ -91,7 +79,8 @@ resource "aws_s3_object" "image" {
   etag         = filemd5("${path.module}/website/profile.jpg")
 }
 
-# Output the static website URL
+# Output the CloudFront website URL
 output "portfolio_website_url" {
-  value = "http://${aws_s3_bucket_website_configuration.portfolio.website_endpoint}"
+  description = "HTTPS URL for the portfolio website"
+  value       = "https://${aws_cloudfront_distribution.portfolio.domain_name}"
 }

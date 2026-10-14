@@ -112,7 +112,7 @@ resource "aws_security_group" "portfolio" {
 
 
 
-  
+
   egress {
     description = "Allow outbound traffic"
     from_port   = 0
