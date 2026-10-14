@@ -2,16 +2,10 @@ name: Terraform Apply
 
 on:
   workflow_dispatch:
-    inputs:
-      previous_run_id:
-        description: "Previous successful Apply run ID (leave blank for first deployment)"
-        required: false
-        type: string
 
 permissions:
   contents: read
   id-token: write
-  actions: read
 
 concurrency:
   group: terraform-portfolio
@@ -45,22 +39,6 @@ jobs:
           role-to-assume: ${{ vars.AWS_ROLE_ARN }}
           aws-region: ap-south-1
 
-      - name: Restore Previous Terraform State
-        if: ${{ inputs.previous_run_id != '' }}
-        uses: actions/download-artifact@v4
-        with:
-          name: terraform-state-${{ inputs.previous_run_id }}
-          path: .
-          repository: ${{ github.repository }}
-          run-id: ${{ inputs.previous_run_id }}
-          github-token: ${{ github.token }}
-
-      - name: Verify Restored State
-        if: ${{ inputs.previous_run_id != '' }}
-        run: |
-          test -s terraform.tfstate
-          terraform state list
-
       - name: Terraform Initialize
         run: terraform init
 
@@ -72,11 +50,3 @@ jobs:
 
       - name: Terraform Apply
         run: terraform apply -auto-approve tfplan
-
-      - name: Save Terraform State Artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: terraform-state-${{ github.run_id }}
-          path: terraform.tfstate
-          if-no-files-found: error
-          retention-days: 90

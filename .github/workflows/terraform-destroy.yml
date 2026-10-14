@@ -3,10 +3,6 @@ name: Terraform Destroy
 on:
   workflow_dispatch:
     inputs:
-      apply_run_id:
-        description: "GitHub Actions run ID containing the Terraform state artifact"
-        required: true
-        type: string
       confirm_destroy:
         description: "Type DESTROY to confirm deletion"
         required: true
@@ -15,7 +11,10 @@ on:
 permissions:
   contents: read
   id-token: write
-  actions: read
+
+concurrency:
+  group: terraform-portfolio
+  cancel-in-progress: false
 
 jobs:
   terraform-destroy:
@@ -54,22 +53,11 @@ jobs:
           role-to-assume: ${{ vars.AWS_ROLE_ARN }}
           aws-region: ap-south-1
 
-      - name: Initialize Terraform
+      - name: Terraform Initialize
         run: terraform init
 
-      - name: Download State from Apply Run
-        uses: actions/download-artifact@v4
-        with:
-          name: terraform-state-${{ inputs.apply_run_id }}
-          path: .
-          repository: ${{ github.repository }}
-          run-id: ${{ inputs.apply_run_id }}
-          github-token: ${{ github.token }}
-
       - name: Verify Terraform State
-        run: |
-          test -s terraform.tfstate
-          terraform state list
+        run: terraform state list
 
       - name: Create Destroy Plan
         run: terraform plan -destroy -out=tfplan
