@@ -4,11 +4,11 @@ on:
   workflow_dispatch:
     inputs:
       apply_run_id:
-        description: "GitHub Actions run ID of the successful Terraform Apply"
+        description: "GitHub Actions run ID containing the Terraform state artifact"
         required: true
         type: string
       confirm_destroy:
-        description: "Type DESTROY to confirm deletion of the infrastructure"
+        description: "Type DESTROY to confirm deletion"
         required: true
         type: string
 
@@ -20,7 +20,6 @@ permissions:
 jobs:
   terraform-destroy:
     name: Destroy AWS Infrastructure
-    if: ${{ inputs.confirm_destroy == 'DESTROY' }}
     runs-on: ubuntu-latest
 
     defaults:
@@ -28,6 +27,15 @@ jobs:
         shell: bash
 
     steps:
+      - name: Verify Destroy Confirmation
+        env:
+          CONFIRM_DESTROY: ${{ inputs.confirm_destroy }}
+        run: |
+          if [[ "$CONFIRM_DESTROY" != "DESTROY" ]]; then
+            echo "ERROR: Confirmation must be exactly DESTROY."
+            exit 1
+          fi
+
       - name: Checkout Terraform Repository
         uses: actions/checkout@v4
 
@@ -59,7 +67,9 @@ jobs:
           github-token: ${{ github.token }}
 
       - name: Verify Terraform State
-        run: terraform state list
+        run: |
+          test -s terraform.tfstate
+          terraform state list
 
       - name: Create Destroy Plan
         run: terraform plan -destroy -out=tfplan
