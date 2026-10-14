@@ -2,11 +2,6 @@ name: Terraform Destroy
 
 on:
   workflow_dispatch:
-    inputs:
-      confirm_destroy:
-        description: "Type DESTROY to confirm deletion"
-        required: true
-        type: string
 
 permissions:
   contents: read
@@ -21,46 +16,24 @@ jobs:
     name: Destroy AWS Infrastructure
     runs-on: ubuntu-latest
 
-    defaults:
-      run:
-        shell: bash
-
     steps:
-      - name: Verify Destroy Confirmation
-        env:
-          CONFIRM_DESTROY: ${{ inputs.confirm_destroy }}
-        run: |
-          if [[ "$CONFIRM_DESTROY" != "DESTROY" ]]; then
-            echo "ERROR: Confirmation must be exactly DESTROY."
-            exit 1
-          fi
-
       - name: Checkout Terraform Repository
         uses: actions/checkout@v4
 
-      - name: Checkout Portfolio Website
-        uses: actions/checkout@v4
-        with:
-          repository: praveen520310/Paul-Praveen-devsecops-portfolio
-          path: website
-
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.8.5
 
-      - name: Configure AWS Credentials
+      - name: Configure AWS Credentials Using OIDC
         uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: ${{ vars.AWS_ROLE_ARN }}
+          role-session-name: github-actions-terraform-destroy
           aws-region: ap-south-1
 
       - name: Terraform Initialize
         run: terraform init
 
-      - name: Verify Terraform State
-        run: terraform state list
-
-      - name: Create Destroy Plan
-        run: terraform plan -destroy -out=tfplan
-
-      - name: Destroy Infrastructure
-        run: terraform apply -auto-approve tfplan
+      - name: Terraform Destroy
+        run: terraform destroy -auto-approve

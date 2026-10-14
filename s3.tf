@@ -1,4 +1,4 @@
-# S3 bucket for portfolio website
+# 1. Create S3 bucket
 resource "aws_s3_bucket" "portfolio" {
   bucket = "praveen-devsecops-portfolio-2026-s3"
 
@@ -9,17 +9,17 @@ resource "aws_s3_bucket" "portfolio" {
   }
 }
 
-# Block public access to the S3 bucket
+# 2. Allow public access for static website hosting
 resource "aws_s3_bucket_public_access_block" "portfolio" {
   bucket = aws_s3_bucket.portfolio.id
 
-  block_public_acls       = true
-  block_public_policy     = true
-  ignore_public_acls      = true
-  restrict_public_buckets = true
+  block_public_acls       = false
+  block_public_policy     = false
+  ignore_public_acls      = false
+  restrict_public_buckets = false
 }
 
-# S3 website hosting configuration (CloudFront uses the REST endpoint)
+# 3. Enable static website hosting
 resource "aws_s3_bucket_website_configuration" "portfolio" {
   bucket = aws_s3_bucket.portfolio.id
 
@@ -32,55 +32,67 @@ resource "aws_s3_bucket_website_configuration" "portfolio" {
   }
 }
 
-# Allow CloudFront OAC to read S3 objects
+# 4. Allow public read access to website files
 resource "aws_s3_bucket_policy" "portfolio" {
   bucket = aws_s3_bucket.portfolio.id
 
-  policy = data.aws_iam_policy_document.portfolio_cloudfront_access.json
+  policy = jsonencode({
+    Version = "2012-10-17"
+
+    Statement = [
+      {
+        Sid       = "PublicReadGetObject"
+        Effect    = "Allow"
+        Principal = "*"
+        Action    = "s3:GetObject"
+        Resource  = "${aws_s3_bucket.portfolio.arn}/*"
+      }
+    ]
+  })
 
   depends_on = [
     aws_s3_bucket_public_access_block.portfolio
   ]
 }
 
-# Upload portfolio HTML
+# 5. Upload HTML
 resource "aws_s3_object" "index" {
   bucket       = aws_s3_bucket.portfolio.id
   key          = "index.html"
   source       = "${path.module}/website/index.html"
+  source_hash  = filemd5("${path.module}/website/index.html")
   content_type = "text/html"
-  etag         = filemd5("${path.module}/website/index.html")
 }
 
-# Upload CSS
+# 6. Upload CSS
 resource "aws_s3_object" "css" {
   bucket       = aws_s3_bucket.portfolio.id
   key          = "style.css"
   source       = "${path.module}/website/style.css"
+  source_hash  = filemd5("${path.module}/website/style.css")
   content_type = "text/css"
-  etag         = filemd5("${path.module}/website/style.css")
 }
 
-# Upload JavaScript
+# 7. Upload JavaScript
 resource "aws_s3_object" "js" {
   bucket       = aws_s3_bucket.portfolio.id
   key          = "script.js"
   source       = "${path.module}/website/script.js"
+  source_hash  = filemd5("${path.module}/website/script.js")
   content_type = "application/javascript"
-  etag         = filemd5("${path.module}/website/script.js")
 }
 
-# Upload profile image
+# 8. Upload profile image
 resource "aws_s3_object" "image" {
   bucket       = aws_s3_bucket.portfolio.id
   key          = "profile.jpg"
   source       = "${path.module}/website/profile.jpg"
+  source_hash  = filemd5("${path.module}/website/profile.jpg")
   content_type = "image/jpeg"
-  etag         = filemd5("${path.module}/website/profile.jpg")
 }
 
-# Output the CloudFront website URL
+# 9. Output the S3 website URL
 output "portfolio_website_url" {
-  description = "HTTPS URL for the portfolio website"
-  value       = "https://${aws_cloudfront_distribution.portfolio.domain_name}"
+  description = "S3 static website endpoint"
+  value       = "http://${aws_s3_bucket_website_configuration.portfolio.website_endpoint}"
 }
