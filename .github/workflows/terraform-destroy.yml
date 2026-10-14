@@ -1,0 +1,68 @@
+name: Terraform Destroy
+
+on:
+  workflow_dispatch:
+    inputs:
+      apply_run_id:
+        description: "GitHub Actions run ID of the successful Terraform Apply"
+        required: true
+        type: string
+      confirm_destroy:
+        description: "Type DESTROY to confirm deletion of the infrastructure"
+        required: true
+        type: string
+
+permissions:
+  contents: read
+  id-token: write
+  actions: read
+
+jobs:
+  terraform-destroy:
+    name: Destroy AWS Infrastructure
+    if: ${{ inputs.confirm_destroy == 'DESTROY' }}
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        shell: bash
+
+    steps:
+      - name: Checkout Terraform Repository
+        uses: actions/checkout@v4
+
+      - name: Checkout Portfolio Website
+        uses: actions/checkout@v4
+        with:
+          repository: praveen520310/Paul-Praveen-devsecops-portfolio
+          path: website
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.AWS_ROLE_ARN }}
+          aws-region: ap-south-1
+
+      - name: Initialize Terraform
+        run: terraform init
+
+      - name: Download State from Apply Run
+        uses: actions/download-artifact@v4
+        with:
+          name: terraform-state-${{ inputs.apply_run_id }}
+          path: .
+          repository: ${{ github.repository }}
+          run-id: ${{ inputs.apply_run_id }}
+          github-token: ${{ github.token }}
+
+      - name: Verify Terraform State
+        run: terraform state list
+
+      - name: Create Destroy Plan
+        run: terraform plan -destroy -out=tfplan
+
+      - name: Destroy Infrastructure
+        run: terraform apply -auto-approve tfplan

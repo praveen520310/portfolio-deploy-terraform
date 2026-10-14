@@ -1,3 +1,4 @@
+
 # S3 bucket for portfolio static website
 resource "aws_s3_bucket" "portfolio" {
   bucket = "praveen-devsecops-portfolio-2026-s3"
@@ -58,36 +59,36 @@ resource "aws_s3_bucket_policy" "portfolio" {
 resource "aws_s3_object" "index" {
   bucket       = aws_s3_bucket.portfolio.id
   key          = "index.html"
-  source       = "D:/Cloud_DevOps-Portfolio/index.html"
+  source       = "${path.module}/website/index.html"
   content_type = "text/html"
-  etag         = filemd5("D:/Cloud_DevOps-Portfolio/index.html")
+  etag         = filemd5("${path.module}/website/index.html")
 }
 
 # Upload CSS
 resource "aws_s3_object" "css" {
   bucket       = aws_s3_bucket.portfolio.id
   key          = "style.css"
-  source       = "D:/Cloud_DevOps-Portfolio/style.css"
+  source       = "${path.module}/website/style.css"
   content_type = "text/css"
-  etag         = filemd5("D:/Cloud_DevOps-Portfolio/style.css")
+  etag         = filemd5("${path.module}/website/style.css")
 }
 
 # Upload JavaScript
 resource "aws_s3_object" "js" {
   bucket       = aws_s3_bucket.portfolio.id
   key          = "script.js"
-  source       = "D:/Cloud_DevOps-Portfolio/script.js"
+  source       = "${path.module}/website/script.js"
   content_type = "application/javascript"
-  etag         = filemd5("D:/Cloud_DevOps-Portfolio/script.js")
+  etag         = filemd5("${path.module}/website/script.js")
 }
 
 # Upload profile image
 resource "aws_s3_object" "image" {
   bucket       = aws_s3_bucket.portfolio.id
   key          = "profile.jpg"
-  source       = "D:/Cloud_DevOps-Portfolio/profile.jpg"
+  source       = "${path.module}/website/profile.jpg"
   content_type = "image/jpeg"
-  etag         = filemd5("D:/Cloud_DevOps-Portfolio/profile.jpg")
+  etag         = filemd5("${path.module}/website/profile.jpg")
 }
 
 # Output the static website URL
