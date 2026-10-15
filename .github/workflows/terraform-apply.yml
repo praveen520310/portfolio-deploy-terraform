@@ -13,7 +13,7 @@ concurrency:
 
 jobs:
   terraform-apply:
-    name: Validate and Plan AWS Infrastructure
+    name: Deploy AWS Infrastructure
     runs-on: ubuntu-latest
 
     defaults:
@@ -32,7 +32,7 @@ jobs:
           repository: praveen520310/Paul-Praveen-devsecops-portfolio
           path: website
 
-      # 3. Configure the profile image URL in the workflow copy
+      # 3. Configure the S3 profile image URL
       - name: Configure S3 Profile Image URL
         run: |
           sed -i \
@@ -45,22 +45,26 @@ jobs:
         with:
           terraform_version: 1.10.5
 
-      # 5. Configure AWS credentials through GitHub OIDC
+      # 5. Configure AWS credentials using GitHub OIDC
       - name: Configure AWS Credentials Using OIDC
         uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: ${{ vars.AWS_ROLE_ARN }}
-          role-session-name: github-actions-terraform-plan
+          role-session-name: github-actions-terraform
           aws-region: ap-south-1
 
-      # 6. Initialize Terraform and its backend
+      # 6. Initialize Terraform
       - name: Terraform Initialize
         run: terraform init
 
-      # 7. Check Terraform configuration syntax
+      # 7. Validate the Terraform configuration
       - name: Terraform Validate
         run: terraform validate
 
-      # 8. Preview infrastructure changes
+      # 8. Generate and save the Terraform plan
       - name: Terraform Plan
         run: terraform plan -out=tfplan
+
+      # 9. Apply the saved Terraform plan
+      - name: Terraform Apply
+        run: terraform apply -auto-approve tfplan
