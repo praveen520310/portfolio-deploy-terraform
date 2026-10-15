@@ -19,19 +19,32 @@ for attempt in 1 2 3; do
 done
 
 # Install required packages
-DEBIAN_FRONTEND=noninteractive apt-get install -y nginx git
+DEBIAN_FRONTEND=noninteractive apt-get install -y nginx curl
 
 # Prepare the website directory
 mkdir -p /var/www/html
 rm -f /var/www/html/index.nginx-debian.html
 
-# Clone the portfolio repository
-if [ ! -d /opt/portfolio/.git ]; then
-    git clone https://github.com/praveen520310/Paul-Praveen-devsecops-portfolio.git /opt/portfolio
-fi
+# S3 bucket URL
+S3_BASE_URL="https://praveen-devsecops-portfolio-2026-s3.s3.ap-south-1.amazonaws.com"
 
-# Copy website files to Nginx's document root
-cp -a /opt/portfolio/. /var/www/html/
+# Download the latest website files from S3
+curl --retry 3 --retry-delay 5 -fSL \
+    "$S3_BASE_URL/index.html" \
+    -o /var/www/html/index.html
+
+curl --retry 3 --retry-delay 5 -fSL \
+    "$S3_BASE_URL/style.css" \
+    -o /var/www/html/style.css
+
+curl --retry 3 --retry-delay 5 -fSL \
+    "$S3_BASE_URL/script.js" \
+    -o /var/www/html/script.js
+
+# Ensure the profile image loads directly from S3
+sed -i \
+    's|src="profile.jpg"|src="https://praveen-devsecops-portfolio-2026-s3.s3.ap-south-1.amazonaws.com/profile.jpg"|' \
+    /var/www/html/index.html
 
 # Set file ownership
 chown -R www-data:www-data /var/www/html
@@ -40,4 +53,4 @@ chown -R www-data:www-data /var/www/html
 systemctl enable nginx
 systemctl restart nginx
 
-echo "Portfolio deployment completed successfully"
+echo "Portfolio deployment from S3 completed successfully"

@@ -13,7 +13,7 @@ concurrency:
 
 jobs:
   terraform-apply:
-    name: Deploy AWS Infrastructure
+    name: Validate and Plan AWS Infrastructure
     runs-on: ubuntu-latest
 
     defaults:
@@ -21,45 +21,46 @@ jobs:
         shell: bash
 
     steps:
+      # 1. Checkout the Terraform infrastructure repository
       - name: Checkout Terraform Repository
         uses: actions/checkout@v4
 
+      # 2. Checkout the portfolio website repository
       - name: Checkout Portfolio Website
         uses: actions/checkout@v4
         with:
           repository: praveen520310/Paul-Praveen-devsecops-portfolio
           path: website
 
-      # Automatically change the image URL in the pipeline's copy
+      # 3. Configure the profile image URL in the workflow copy
       - name: Configure S3 Profile Image URL
         run: |
           sed -i \
             's|src="profile.jpg"|src="https://praveen-devsecops-portfolio-2026-s3.s3.ap-south-1.amazonaws.com/profile.jpg"|' \
             website/index.html
 
+      # 4. Install Terraform
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
         with:
           terraform_version: 1.10.5
 
-      - name: Check Terraform Version
-        run: terraform version
-
+      # 5. Configure AWS credentials through GitHub OIDC
       - name: Configure AWS Credentials Using OIDC
         uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: ${{ vars.AWS_ROLE_ARN }}
-          role-session-name: github-actions-terraform
+          role-session-name: github-actions-terraform-plan
           aws-region: ap-south-1
 
+      # 6. Initialize Terraform and its backend
       - name: Terraform Initialize
         run: terraform init
 
+      # 7. Check Terraform configuration syntax
       - name: Terraform Validate
         run: terraform validate
 
+      # 8. Preview infrastructure changes
       - name: Terraform Plan
         run: terraform plan -out=tfplan
-
-      - name: Terraform Apply
-        run: terraform apply -auto-approve tfplan
