@@ -30,10 +30,18 @@ jobs:
           repository: praveen520310/Paul-Praveen-devsecops-portfolio
           path: website
 
+      # Automatically change the image URL in the pipeline's copy
+      - name: Configure S3 Profile Image URL
+        run: |
+          sed -i \
+            's|src="profile.jpg"|src="https://praveen-devsecops-portfolio-2026-s3.s3.ap-south-1.amazonaws.com/profile.jpg"|' \
+            website/index.html
+
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
         with:
           terraform_version: 1.10.5
+
       - name: Check Terraform Version
         run: terraform version
 
